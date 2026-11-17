@@ -44,8 +44,10 @@ function adjustMatcher(matcher) {
   } else if (isRegExp(matcher)) {
     // The only other type of matcher allowed is a Regexp.
     // Match entire URL / disallow partial matches.
+    // The source is wrapped in a non-capturing group, so that the anchors apply to every branch of
+    // an alternation (`/a|b/` must not become `^a|b$`).
     // Flags are reset (i.e. no global, ignoreCase or multiline)
-    return new RegExp('^' + matcher.source + '$');
+    return new RegExp('^(?:' + matcher.source + ')$');
   } else {
     throw $sceMinErr('imatcher',
         'Matchers may only be "self", string patterns or RegExp objects');
