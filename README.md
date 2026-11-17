@@ -24,7 +24,9 @@ that works with `require()` the same way as in the upstream `angular*` packages.
 Versions have the form `1.3.N-onto`. The first fork release is `1.3.21-onto`, one step after
 1.3.20. Each release increases `N` by one, whatever it contains.
 
-The version comes from the `version` field of `package.json`. Error messages link to
+The `version` field of `package.json` holds the last release, 1.3.20 before the first fork
+release. The release job sets it to the new version, and the build takes the version from it.
+Error messages link to
 `errors.angularjs.org` with the `upstreamVersion` field (1.3.20), because the error pages exist
 only for upstream releases.
 
@@ -45,10 +47,9 @@ The Jenkins job built from `release.Jenkinsfile` releases a version. Its paramet
 The job stops when the tag `v<version>` already exists. Otherwise it:
 
 1. Sets the version in `package.json` and runs `grunt package` in the `Dockerfile` image.
-2. Publishes the packages from `build/npm/` with Node 20, under the `latest` dist-tag. A rerun
-   skips the packages that are already published.
+2. Publishes the packages from `build/npm/` with Node 20, under the `latest` dist-tag.
 3. Commits `package.json`, tags the commit `v<version>`, and pushes the commit to the branch and
-   the tag to `origin`.
+   the tag to `origin` in one atomic push.
 
 ### License
 

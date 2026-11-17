@@ -128,15 +128,9 @@ pipeline {
                         npm whoami || { echo 'ERROR: NPM authentication failed! Invalid or expired NPM_TOKEN.'; exit 1; }
                     '''
 
-                    // A rerun after a partial failure skips the packages that are already published.
                     // The dist-tag is `latest`: the distTag field of package.json is for the upstream angular packages.
                     sh '''
                         for dir in build/npm/*/; do
-                            name=$(node -p "require('./${dir}package.json').name")
-                            if [ "$(npm view "${name}@${RELEASE_VERSION}" version 2>/dev/null)" = "$RELEASE_VERSION" ]; then
-                                echo "${name}@${RELEASE_VERSION} is already published, skipping"
-                                continue
-                            fi
                             npm publish "$dir" --access public --tag latest
                         done
                     '''
@@ -165,9 +159,9 @@ pipeline {
                     sh 'mkdir -p ~/.ssh'
                     sh 'ssh-keyscan github.com >> ~/.ssh/known_hosts'
                     sh 'git remote set-url origin git@github.com:Ontotext-AD/angular.js.git'
+                    // Atomic, so that a failed push leaves neither the release commit nor the tag in origin.
                     // From the parameter, not $GIT_BRANCH: the Git plugin also sets GIT_BRANCH, as origin/<branch>.
-                    sh "git push origin HEAD:refs/heads/${params.GIT_BRANCH}"
-                    sh 'git push origin "refs/tags/v$RELEASE_VERSION"'
+                    sh "git push --atomic origin HEAD:refs/heads/${params.GIT_BRANCH} refs/tags/v${params.RELEASE_VERSION}"
                 }
             }
         }
