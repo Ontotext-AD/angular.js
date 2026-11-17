@@ -1,6 +1,7 @@
 /**
  * @license AngularJS v"NG_VERSION_FULL"
  * (c) 2010-2014 Google, Inc. http://angularjs.org
+ * Ontotext fork: https://github.com/Ontotext-AD/angular.js
  * License: MIT
  */
 (function(window, document, undefined) {

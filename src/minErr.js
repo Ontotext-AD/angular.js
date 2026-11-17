@@ -49,7 +49,7 @@ function minErr(module, ErrorConstructor) {
       return match;
     });
 
-    message = message + '\nhttp://errors.angularjs.org/"NG_VERSION_FULL"/' +
+    message = message + '\nhttp://errors.angularjs.org/"NG_VERSION_UPSTREAM"/' +
       (module ? module + '/' : '') + code;
     for (i = 2; i < arguments.length; i++) {
       message = message + (i == 2 ? '?' : '&') + 'p' + (i - 2) + '=' +

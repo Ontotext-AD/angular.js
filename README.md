@@ -1,3 +1,48 @@
+Ontotext fork
+=============
+
+This is the Ontotext-maintained fork of the end-of-life AngularJS 1.3 branch. It ships security
+fixes for applications that still run on AngularJS 1.3, such as the legacy part of the GraphDB
+Workbench. It adds no features. The `v1.3.x` branch starts from the upstream `v1.3.x` branch,
+after the last upstream 1.3 release, 1.3.20.
+
+### Packages
+
+`grunt package` builds these npm packages in `build/npm/`:
+
+* `@ontotext/angular`
+* `@ontotext/angular-animate`
+* `@ontotext/angular-cookies`
+* `@ontotext/angular-route`
+* `@ontotext/angular-sanitize`
+
+Each package holds the `.js`, `.min.js` and `.min.js.map` files of its module, and an `index.js`
+that works with `require()` the same way as in the upstream `angular*` packages.
+
+### Versioning
+
+Versions have the form `1.3.N-onto`. The first fork release is `1.3.21-onto`, one step after
+1.3.20. Each release increases `N` by one, whatever it contains.
+
+The version comes from the `version` field of `package.json`. Error messages link to
+`errors.angularjs.org` with the `upstreamVersion` field (1.3.20), because the error pages exist
+only for upstream releases.
+
+### Build prerequisites
+
+* Node.js 4.9 with npm 2
+* Java 8 (runs the Closure Compiler for the minified files)
+* `grunt-cli` 0.1 (`npm install -g grunt-cli@0.1.13`)
+* Firefox ESR for the unit tests
+
+The `Dockerfile` in this repository provides all of them.
+
+### License
+
+MIT. The copyright notices of the original authors are kept in [LICENSE](LICENSE) and in the
+header of each built file.
+
+
 AngularJS [![Build Status](https://travis-ci.org/angular/angular.js.svg?branch=master)](https://travis-ci.org/angular/angular.js)
 =========
 
