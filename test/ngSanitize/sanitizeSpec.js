@@ -275,6 +275,16 @@ describe('HTML', function() {
       expectHTML('<pre>\n\n\n\n\n\nfoo</pre>').toEqual('<pre>&#10;&#10;&#10;&#10;&#10;&#10;foo</pre>');
     });
 
+    it('should keep carriage returns written as character references', function() {
+      // The browser serializes them as raw carriage returns, which a parser turns into newlines.
+      expectHTML('a&#13;b').toEqual('a&#13;b');
+      expectHTML('<b title="a&#13;b">x</b>').toEqual('<b title="a&#13;b">x</b>');
+      expectHTML('<pre>&#13;&#10;x</pre>').toEqual('<pre>&#13;&#10;x</pre>');
+    });
+  });
+
+  describe('mXSS protection with a faked browser', function() {
+    /* global htmlParseAndSerialize: false */
     if (angular.isUndefined(window.htmlParseAndSerialize)) return;
 
     // Stands in for a browser bug: parsing the given markup and serializing it again yields
