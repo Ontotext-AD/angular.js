@@ -37,6 +37,19 @@ only for upstream releases.
 
 The `Dockerfile` in this repository provides all of them.
 
+### Releasing
+
+The Jenkins job built from `release.Jenkinsfile` releases a version. Its parameters are the branch
+(`GIT_BRANCH`, default `v1.3.x`), the version (`RELEASE_VERSION`, of the form in
+[Versioning](#versioning)) and an optional Slack notification (`NOTIFY_SLACK`, `SLACK_CHANNEL`).
+The job stops when the tag `v<version>` already exists. Otherwise it:
+
+1. Sets the version in `package.json` and runs `grunt package` in the `Dockerfile` image.
+2. Publishes the packages from `build/npm/` with Node 20, under the `latest` dist-tag. A rerun
+   skips the packages that are already published.
+3. Commits `package.json`, tags the commit `v<version>`, and pushes the commit to the branch and
+   the tag to `origin`.
+
 ### License
 
 MIT. The copyright notices of the original authors are kept in [LICENSE](LICENSE) and in the
