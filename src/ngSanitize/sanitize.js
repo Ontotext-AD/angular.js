@@ -145,14 +145,49 @@ var $sanitizeMinErr = angular.$$minErr('$sanitize');
  */
 function $SanitizeProvider() {
   this.$get = ['$$sanitizeUri', function($$sanitizeUri) {
-    return function(html) {
+    function sanitize(html) {
       var buf = [];
       htmlParser(html, htmlSanitizeWriter(buf, function(uri, isImage) {
         return !/^unsafe/.test($$sanitizeUri(uri, isImage));
       }));
       return buf.join('');
+    }
+
+    return function(html) {
+      return protectFromMXSS(sanitize(html), sanitize);
     };
   }];
+}
+
+/**
+ * mXSS protection.
+ *
+ * The browser parses the sanitized html again when it is inserted into the page. Due to browser
+ * bugs, the DOM that the browser builds may differ from the html the sanitizer produced, and
+ * contain markup that the sanitizer would have removed (mutation XSS).
+ *
+ * The sanitized html is safe when sanitizing what the browser builds from it removes nothing.
+ * Otherwise the sanitizer sanitizes what the browser builds and checks the result in the same
+ * way, a limited number of times.
+ *
+ * @param {string} safeHtml The sanitized html.
+ * @param {function(string): string} sanitize The sanitizer.
+ * @returns {string} The html that is still safe after the browser parses it.
+ */
+function protectFromMXSS(safeHtml, sanitize) {
+  var parsed = htmlParseAndSerialize(safeHtml);
+  for (var attempts = 5; ; attempts--) {
+    if (attempts === 0) {
+      throw $sanitizeMinErr('uinput', "Failed to sanitize html because the input is unstable");
+    }
+    var resanitized = sanitize(parsed);
+    var reparsed = htmlParseAndSerialize(resanitized);
+    if (reparsed === parsed) {
+      return safeHtml;
+    }
+    safeHtml = resanitized;
+    parsed = reparsed;
+  }
 }
 
 function sanitizeText(chars) {
@@ -419,6 +454,24 @@ function htmlParser(html, handler) {
       stack.length = pos;
     }
   }
+}
+
+var inertBodyElement;
+/**
+ * Lets the browser parse the html, as it would when the html is inserted into the page, and
+ * returns the browser's serialization of the result. The html is parsed in an inert document,
+ * so it loads no resources and runs no scripts.
+ * @param {string} html
+ * @returns {string} The serialized html.
+ */
+function htmlParseAndSerialize(html) {
+  if (!inertBodyElement) {
+    inertBodyElement = document.implementation.createHTMLDocument('inert').body;
+  }
+  inertBodyElement.innerHTML = html;
+  var serialized = inertBodyElement.innerHTML;
+  inertBodyElement.innerHTML = '';
+  return serialized;
 }
 
 var hiddenPre=document.createElement("pre");

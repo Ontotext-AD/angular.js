@@ -267,6 +267,40 @@ describe('HTML', function() {
       .toEqual('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a></a></svg>');
   });
 
+  describe('mXSS protection', function() {
+    /* global htmlParseAndSerialize: false */
+    if (angular.isUndefined(window.htmlParseAndSerialize)) return;
+
+    // Stands in for a browser bug: parsing the given markup and serializing it again yields
+    // different, possibly dangerous, markup.
+    function fakeBrowserMutation(mutate) {
+      var parseAndSerialize = window.htmlParseAndSerialize;
+      spyOn(window, 'htmlParseAndSerialize').andCallFake(function(html) {
+        return mutate(parseAndSerialize(html));
+      });
+    }
+
+    it('should sanitize the markup that the browser mutates the sanitized html into', function() {
+      fakeBrowserMutation(function(html) {
+        return html.replace('<i>mutate</i>', '<img src="x" onerror="alert(1)">');
+      });
+
+      expectHTML('<b>a</b><i>mutate</i>').toEqual('<b>a</b><img src="x"/>');
+    });
+
+    it('should throw uinput if the browser keeps mutating the sanitized html', function() {
+      var mutations = 0;
+      fakeBrowserMutation(function(html) {
+        // Stop at some point, so that the test ends even if the sanitizer never gives up.
+        return ++mutations > 100 ? html : html + '<i>' + mutations + '</i>';
+      });
+
+      expect(function() {
+        expectHTML('<b>a</b>');
+      }).toThrowMinErr('$sanitize', 'uinput', 'Failed to sanitize html because the input is unstable');
+    });
+  });
+
   describe('htmlSanitizerWriter', function() {
     /* global htmlSanitizeWriter: false */
     if (angular.isUndefined(window.htmlSanitizeWriter)) return;
