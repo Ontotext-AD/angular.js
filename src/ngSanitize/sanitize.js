@@ -56,6 +56,9 @@ var $sanitizeMinErr = angular.$$minErr('$sanitize');
  *   it into the returned string, however, since our parser is more strict than a typical browser
  *   parser, it's possible that some obscure input, which would be recognized as valid HTML by a
  *   browser, won't make it through the sanitizer. The input may also contain SVG markup.
+ *   To protect from mXSS, the sanitizer lets the browser parse the sanitized html and checks that
+ *   the result is still safe. It throws {@link error/$sanitize/uinput `$sanitize:uinput`} when the
+ *   browser keeps changing the html.
  *   The whitelist is configured using the functions `aHrefSanitizationWhitelist` and
  *   `imgSrcSanitizationWhitelist` of {@link ng.$compileProvider `$compileProvider`}.
  *
@@ -154,13 +157,15 @@ function $SanitizeProvider() {
     }
 
     return function(html) {
-      return protectFromMXSS(sanitize(html), sanitize);
+      return sanitizeProtectingFromMXSS(html, sanitize);
     };
   }];
 }
 
+var MXSS_ATTEMPTS = 5;
+
 /**
- * mXSS protection.
+ * Sanitizes the html and protects the result from mXSS.
  *
  * The browser parses the sanitized html again when it is inserted into the page. Due to browser
  * bugs, the DOM that the browser builds may differ from the html the sanitizer produced, and
@@ -168,26 +173,25 @@ function $SanitizeProvider() {
  *
  * The sanitized html is safe when sanitizing what the browser builds from it removes nothing.
  * Otherwise the sanitizer sanitizes what the browser builds and checks the result in the same
- * way, a limited number of times.
+ * way, up to `MXSS_ATTEMPTS` times.
  *
- * @param {string} safeHtml The sanitized html.
- * @param {function(string): string} sanitize The sanitizer.
- * @returns {string} The html that is still safe after the browser parses it.
+ * @param {string} html The html to sanitize.
+ * @param {function(string): string} sanitize Sanitizes html, without the mXSS protection.
+ * @returns {string} The sanitized html that is still safe after the browser parses it.
  */
-function protectFromMXSS(safeHtml, sanitize) {
-  var parsed = htmlParseAndSerialize(safeHtml);
-  for (var attempts = 5; ; attempts--) {
-    if (attempts === 0) {
-      throw $sanitizeMinErr('uinput', "Failed to sanitize html because the input is unstable");
-    }
+function sanitizeProtectingFromMXSS(html, sanitize) {
+  var candidate = sanitize(html);
+  var parsed = htmlParseAndSerialize(candidate);
+  for (var attempt = 0; attempt < MXSS_ATTEMPTS; attempt++) {
     var resanitized = sanitize(parsed);
     var reparsed = htmlParseAndSerialize(resanitized);
     if (reparsed === parsed) {
-      return safeHtml;
+      return candidate;
     }
-    safeHtml = resanitized;
+    candidate = resanitized;
     parsed = reparsed;
   }
+  throw $sanitizeMinErr('uinput', "Failed to sanitize html because the input is unstable");
 }
 
 function sanitizeText(chars) {
@@ -456,19 +460,29 @@ function htmlParser(html, handler) {
   }
 }
 
-var inertBodyElement;
+var inertBodyElement = document.implementation.createHTMLDocument('inert').body;
 /**
  * Lets the browser parse the html, as it would when the html is inserted into the page, and
  * returns the browser's serialization of the result. The html is parsed in an inert document,
  * so it loads no resources and runs no scripts.
+ *
+ * The parser drops the first newline of a pre, but the serializer does not add it back, so a
+ * pre that starts with a newline would lose one newline on each parse. The newline is added back
+ * here, so that parsing the serialized html again builds the same DOM.
+ *
  * @param {string} html
  * @returns {string} The serialized html.
  */
 function htmlParseAndSerialize(html) {
-  if (!inertBodyElement) {
-    inertBodyElement = document.implementation.createHTMLDocument('inert').body;
-  }
   inertBodyElement.innerHTML = html;
+  var pres = inertBodyElement.getElementsByTagName('pre');
+  for (var i = 0; i < pres.length; i++) {
+    var firstChild = pres[i].firstChild;
+    if (firstChild && firstChild.nodeType === 3 /* text node */ &&
+        firstChild.nodeValue.charAt(0) === '\n') {
+      firstChild.nodeValue = '\n' + firstChild.nodeValue;
+    }
+  }
   var serialized = inertBodyElement.innerHTML;
   inertBodyElement.innerHTML = '';
   return serialized;

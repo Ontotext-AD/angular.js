@@ -268,7 +268,13 @@ describe('HTML', function() {
   });
 
   describe('mXSS protection', function() {
-    /* global htmlParseAndSerialize: false */
+
+    it('should keep the leading newlines of pre', function() {
+      // The browser drops the first newline of a pre when it parses the html.
+      expectHTML('<pre>\n\nfoo</pre>').toEqual('<pre>&#10;&#10;foo</pre>');
+      expectHTML('<pre>\n\n\n\n\n\nfoo</pre>').toEqual('<pre>&#10;&#10;&#10;&#10;&#10;&#10;foo</pre>');
+    });
+
     if (angular.isUndefined(window.htmlParseAndSerialize)) return;
 
     // Stands in for a browser bug: parsing the given markup and serializing it again yields
