@@ -317,6 +317,38 @@ describe('HTML', function() {
     });
   });
 
+  it('should not accept SVG animation tags', function() {
+    expectHTML('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a><text y="1em">Click me</text><animate attributeName="xlink:href" values="javascript:alert(1)"/></a></svg>')
+      .toEqual('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a><text y="1em">Click me</text></a></svg>');
+
+    expectHTML('<svg><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="?"><circle r="400"></circle>' +
+    '<animate attributeName="xlink:href" begin="0" from="javascript:alert(1)" to="&" /></a></svg>')
+      .toEqual('<svg><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="?"><circle r="400"></circle></a></svg>');
+  });
+
+  it('should not accept the SVG set tag', function() {
+    expectHTML('<svg><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="?"><circle r="400"></circle>' +
+    '<set attributeName="xlink:href" begin="0" to="javascript:alert(1)" /></a></svg>')
+      .toEqual('<svg><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="?"><circle r="400"></circle></a></svg>');
+  });
+
+  // The sanitizer lowercases tag and attribute names, but makeMap keeps its keys as written, so
+  // camelCase entries never match. These guard against the animation tags and attributes coming
+  // back if name matching is ever made case-insensitive.
+  it('should not accept the camelCase SVG animation tags', function() {
+    expectHTML('<svg><circle r="400">' +
+    '<animateColor attributeName="fill" from="red" to="blue" />' +
+    '<animateMotion path="M0,0 L10,10" />' +
+    '<animateTransform attributeName="transform" type="rotate" from="0" to="360" />' +
+    '</circle></svg>')
+      .toEqual('<svg><circle r="400"></circle></svg>');
+  });
+
+  it('should not accept the SVG animation attributes attributeName and attributeType', function() {
+    expectHTML('<svg><circle r="400" attributeName="xlink:href" attributeType="XML"></circle></svg>')
+      .toEqual('<svg><circle r="400"></circle></svg>');
+  });
+
   describe('htmlSanitizerWriter', function() {
     /* global htmlSanitizeWriter: false */
     if (angular.isUndefined(window.htmlSanitizeWriter)) return;
