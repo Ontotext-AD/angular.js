@@ -8,6 +8,8 @@ pipeline {
         // A new push to the same branch or PR supersedes the running build, so abort it instead of queueing.
         disableConcurrentBuilds(abortPrevious: true)
         timeout(time: 1, unit: 'HOURS')
+        // Multibranch keeps every build of a live branch or PR; keep only the latest ones.
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
 
     stages {
