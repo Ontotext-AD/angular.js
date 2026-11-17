@@ -84,6 +84,7 @@
   getBlockNodes: true,
   hasOwnProperty: true,
   createMap: true,
+  UNSAFE_restoreLegacyJqLiteXHTMLReplacement: true,
 
   NODE_TYPE_ELEMENT: true,
   NODE_TYPE_ATTRIBUTE: true,
@@ -1490,6 +1491,24 @@ function bootstrap(element, modules, config) {
 function reloadWithDebugInfo() {
   window.name = 'NG_ENABLE_DEBUG_INFO!' + window.name;
   window.location.reload();
+}
+
+/**
+ * @ngdoc function
+ * @name angular.UNSAFE_restoreLegacyJqLiteXHTMLReplacement
+ * @module ng
+ * @kind function
+ *
+ * @description
+ * Restores the insecure behavior of jqLite before 1.3.21-onto, which turns XHTML-like strings like
+ * `<div /><span />` to `<div></div><span></span>` instead of `<div><span></span></div>`.
+ * The new behavior is a security fix (CVE-2020-7676), so if you use this method, please adjust
+ * to the change & remove the call as soon as possible.
+ *
+ * Note that this only patches jqLite. jQuery before 3.5.0 always expands such tags.
+ */
+function UNSAFE_restoreLegacyJqLiteXHTMLReplacement() {
+  JQLite.legacyXHTMLReplacement = true;
 }
 
 /**

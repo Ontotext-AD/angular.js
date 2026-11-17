@@ -127,6 +127,126 @@ describe('jqLite', function() {
         expect(nodes[0].nodeName.toLowerCase()).toBe(name);
       });
     });
+
+    it('should allow construction of multiple <option> elements', function() {
+      var nodes = jqLite('<option></option><option></option>');
+      expect(nodes.length).toBe(2);
+      expect(nodes[0].nodeName.toLowerCase()).toBe('option');
+      expect(nodes[1].nodeName.toLowerCase()).toBe('option');
+    });
+
+
+    describe('security', function() {
+      var container;
+
+      afterEach(function() {
+        delete JQLite.legacyXHTMLReplacement;
+        delete window.xss;
+        if (container) {
+          container.remove();
+          container = null;
+        }
+      });
+
+
+      it('should not expand XHTML-like self-closing tags', function() {
+        // jQuery 2.x still expands them.
+        if (!_jqLiteMode) return;
+
+        var nodes = jqLite('<div/><span/>');
+        expect(nodes.length).toBe(1);
+        expect(nodes[0].nodeName.toLowerCase()).toBe('div');
+        expect(nodes[0].firstChild.nodeName.toLowerCase()).toBe('span');
+      });
+
+
+      it('should not crash at attempts to close the table wrapper', function() {
+        // jQuery doesn't pass this test.
+        if (!_jqLiteMode) return;
+
+        // Support: IE <10
+        // IE 9 still needs the old-style innerHTML assignment, as it is the only one that works.
+        if (msie < 10) return;
+
+        expect(function() {
+          // This input tries to close the tags that wrap it based on wrapMap, to escape the
+          // wrapper and make the descent into it fail.
+          var nodes = jqLite('<td></td></tr></tbody></table><td></td>');
+          expect(nodes.length).toBe(2);
+          expect(nodes[0].nodeName.toLowerCase()).toBe('td');
+          expect(nodes[1].nodeName.toLowerCase()).toBe('td');
+        }).not.toThrow();
+      });
+
+
+      it('should not unsanitize sanitized code', function() {
+        // jQuery <3.5.0 fails these tests.
+        if (!_jqLiteMode) return;
+
+        var finished = 0,
+            htmlStrings;
+
+        container = jqLite('<div></div>');
+        jqLite(document.body).append(container);
+        window.xss = jasmine.createSpy('xss');
+
+        // Test cases by Masato Kinugawa from Cure53, from the upstream 1.8.0 fix.
+        // Each case calls xss() with its own index, which the assertions rely on.
+        htmlStrings = [
+          '<img alt="<x" title="/><img src=url404 onerror=xss(0)>">',
+          '<img alt="\n<x" title="/>\n<img src=url404 onerror=xss(1)>">',
+          '<style><style/><img src=url404 onerror=xss(2)>',
+          '<xmp><xmp/><img src=url404 onerror=xss(3)>',
+          '<title><title /><img src=url404 onerror=xss(4)>',
+          '<iframe><iframe/><img src=url404 onerror=xss(5)>',
+          '<noframes><noframes/><img src=url404 onerror=xss(6)>',
+          '<noscript><noscript/><img src=url404 onerror=xss(7)>',
+          '<foo" alt="" title="/><img src=url404 onerror=xss(8)>">',
+          '<img alt="<x" title="" src="/><img src=url404 onerror=xss(9)>">',
+          '<noscript/><img src=url404 onerror=xss(10)>',
+          '<noembed><noembed/><img src=url404 onerror=xss(11)>',
+
+          // CVE-2020-7676: wrapping <option> in <select> changes how the input is parsed.
+          '<option><style></option></select><img src=url404 onerror=xss(12)></style>'
+        ];
+
+        runs(function() {
+          forEach(htmlStrings, function(htmlString) {
+            var element = jqLite('<div></div>');
+            container.append(element);
+            element.append(jqLite(htmlString));
+          });
+
+          // Give the browser time to fail loading the images and run their onerror handlers.
+          window.setTimeout(function() {
+            finished++;
+          }, 1000);
+        });
+
+        waitsFor(function() {
+          return finished;
+        }, 'the images to fail loading', 5000);
+
+        runs(function() {
+          forEach(htmlStrings, function(htmlString, index) {
+            expect(window.xss).not.toHaveBeenCalledWith(index);
+          });
+        });
+      });
+
+
+      it('should allow to restore the legacy insecure behavior', function() {
+        // jQuery doesn't have this API.
+        if (!_jqLiteMode) return;
+
+        angular.UNSAFE_restoreLegacyJqLiteXHTMLReplacement();
+
+        var nodes = jqLite('<div/><span/>');
+        expect(nodes.length).toBe(2);
+        expect(nodes[0].nodeName.toLowerCase()).toBe('div');
+        expect(nodes[1].nodeName.toLowerCase()).toBe('span');
+      });
+    });
   });
 
   describe('_data', function() {
