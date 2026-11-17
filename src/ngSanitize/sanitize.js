@@ -162,27 +162,24 @@ function $SanitizeProvider() {
   }];
 }
 
-var MXSS_ATTEMPTS = 5;
+var MAX_MXSS_ATTEMPTS = 5;
 
 /**
- * Sanitizes the html and protects the result from mXSS.
+ * Sanitizes the html so that it stays safe after the browser parses it again (mutation XSS).
  *
- * The browser parses the sanitized html again when it is inserted into the page. Due to browser
- * bugs, the DOM that the browser builds may differ from the html the sanitizer produced, and
- * contain markup that the sanitizer would have removed (mutation XSS).
- *
- * The sanitized html is safe when sanitizing what the browser builds from it removes nothing.
- * Otherwise the sanitizer sanitizes what the browser builds and checks the result in the same
- * way, up to `MXSS_ATTEMPTS` times.
+ * A browser bug can turn the sanitized html into markup the sanitizer would have removed. The
+ * html is safe when sanitizing what the browser builds from it removes nothing; otherwise what
+ * the browser builds is sanitized and checked the same way.
  *
  * @param {string} html The html to sanitize.
  * @param {function(string): string} sanitize Sanitizes html, without the mXSS protection.
  * @returns {string} The sanitized html that is still safe after the browser parses it.
+ * @throws {$sanitize:uinput} When the browser changes the html on `MAX_MXSS_ATTEMPTS` checks.
  */
 function sanitizeProtectingFromMXSS(html, sanitize) {
   var candidate = sanitize(html);
   var parsed = htmlParseAndSerialize(candidate);
-  for (var attempt = 0; attempt < MXSS_ATTEMPTS; attempt++) {
+  for (var attempt = 0; attempt < MAX_MXSS_ATTEMPTS; attempt++) {
     var resanitized = sanitize(parsed);
     var reparsed = htmlParseAndSerialize(resanitized);
     if (reparsed === parsed) {
@@ -462,28 +459,26 @@ function htmlParser(html, handler) {
 
 var inertBodyElement = document.implementation.createHTMLDocument('inert').body;
 /**
- * Lets the browser parse the html, as it would when the html is inserted into the page, and
- * returns the browser's serialization of the result. The html is parsed in an inert document,
- * so it loads no resources and runs no scripts.
+ * Lets the browser parse the html, as it would when the html is inserted into the page.
  *
- * The parser drops the first newline of a pre, but the serializer does not add it back, so a
- * pre that starts with a newline would lose one newline on each parse. The newline is added back
- * here, so that parsing the serialized html again builds the same DOM.
+ * The html is parsed in an inert document, so it loads no resources and runs no scripts.
  *
  * @param {string} html
- * @returns {string} The serialized html.
+ * @returns {string} The browser's serialization of the result, which parses back into the same DOM.
  */
 function htmlParseAndSerialize(html) {
   inertBodyElement.innerHTML = html;
   var pres = inertBodyElement.getElementsByTagName('pre');
   for (var i = 0; i < pres.length; i++) {
     var firstChild = pres[i].firstChild;
+    // The parser drops the first newline of a pre and the serializer does not add it back.
     if (firstChild && firstChild.nodeType === 3 /* text node */ &&
         firstChild.nodeValue.charAt(0) === '\n') {
       firstChild.nodeValue = '\n' + firstChild.nodeValue;
     }
   }
-  var serialized = inertBodyElement.innerHTML;
+  // The serializer writes carriage returns raw, and the parser turns raw ones into newlines.
+  var serialized = inertBodyElement.innerHTML.replace(/\r/g, '&#13;');
   inertBodyElement.innerHTML = '';
   return serialized;
 }
