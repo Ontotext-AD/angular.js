@@ -20,3 +20,5 @@ libpeerconnection.log
 npm-debug.log
 /tmp/
 /scripts/bower/bower-*
+/.ci-home/
+/test_out/
