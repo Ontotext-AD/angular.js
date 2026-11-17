@@ -107,6 +107,8 @@ module.exports = function(grunt) {
     jshint: {
       options: {
         jshintrc: true,
+        // grunt-contrib-jshint 0.10 calls path.dirname() on this option, which throws on null in Node >= 0.12.
+        reporterOutput: ''
       },
       node: {
         files: { src: ['*.js', 'lib/**/*.js'] },
