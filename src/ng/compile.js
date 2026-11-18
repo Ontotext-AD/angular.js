@@ -1052,14 +1052,13 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           // sanitize img[srcset] values
           var result = "";
 
-          // first check if there are spaces because it's not the same pattern
           var trimmedSrcset = trim(value);
-          //                (   999x   ,|   999w   ,|   ,|,   )
-          var srcPattern = /(\s+\d+x\s*,|\s+\d+w\s*,|\s+,|,\s+)/;
-          var pattern = /\s/.test(trimmedSrcset) ? srcPattern : /(,)/;
 
-          // split srcset into tuple of uri and descriptor except for the last item
-          var rawUris = trimmedSrcset.split(pattern);
+          // split srcset into tuple of uri and descriptor except for the last item;
+          // without whitespace, only a comma separates them
+          var rawUris = /\s/.test(trimmedSrcset) ?
+              splitSrcset(trimmedSrcset) :
+              trimmedSrcset.split(/(,)/);
 
           // for each tuples
           var nbrUrisWith2parts = Math.floor(rawUris.length / 2);
@@ -2608,6 +2607,78 @@ function tokenDifference(str1, str2) {
     values += (values.length > 0 ? ' ' : '') + token;
   }
   return values;
+}
+
+/**
+ * Splits a srcset the way `split(/(\s+\d+x\s*,|\s+\d+w\s*,|\s+,|,\s+)/)` does, in linear time.
+ * That RegExp takes quadratic time on long whitespace runs (CVE-2024-21490).
+ *
+ * @param srcset the trimmed srcset value
+ * @returns the parts between the separators, with each separator between the two parts it separates
+ */
+function splitSrcset(srcset) {
+  var parts = [];
+  var partStart = 0;
+  var position = 0;
+
+  while (position < srcset.length) {
+    var separatorEnd = -1;
+    var nextPosition = position + 1;
+    var whitespaceEnd;
+
+    if (isWhitespace(srcset.charAt(position))) {
+      whitespaceEnd = skipSrcsetWhitespace(srcset, position);
+      var digitsEnd = skipSrcsetDigits(srcset, whitespaceEnd);
+      var charAfterDigits = srcset.charAt(digitsEnd);
+
+      if (digitsEnd > whitespaceEnd && (charAfterDigits === 'x' || charAfterDigits === 'w')) {
+        var commaPosition = skipSrcsetWhitespace(srcset, digitsEnd + 1);
+        if (srcset.charAt(commaPosition) === ',') {
+          separatorEnd = commaPosition + 1;
+        }
+      }
+      if (separatorEnd < 0 && srcset.charAt(whitespaceEnd) === ',') {
+        separatorEnd = whitespaceEnd + 1;
+      }
+      // These separators depend only on what follows the whitespace run, so none of them starts
+      // later in the run either.
+      nextPosition = whitespaceEnd;
+    } else if (srcset.charAt(position) === ',') {
+      whitespaceEnd = skipSrcsetWhitespace(srcset, position + 1);
+      if (whitespaceEnd > position + 1) {
+        separatorEnd = whitespaceEnd;
+      }
+    }
+
+    if (separatorEnd < 0) {
+      position = nextPosition;
+    } else {
+      parts.push(srcset.substring(partStart, position), srcset.substring(position, separatorEnd));
+      partStart = position = separatorEnd;
+    }
+  }
+
+  parts.push(srcset.substring(partStart));
+  return parts;
+}
+
+function isWhitespace(character) {
+  return /\s/.test(character);
+}
+
+function skipSrcsetWhitespace(srcset, position) {
+  while (isWhitespace(srcset.charAt(position))) {
+    position++;
+  }
+  return position;
+}
+
+function skipSrcsetDigits(srcset, position) {
+  var character = srcset.charAt(position);
+  while (character >= '0' && character <= '9') {
+    character = srcset.charAt(++position);
+  }
+  return position;
 }
 
 function removeComments(jqNodes) {
