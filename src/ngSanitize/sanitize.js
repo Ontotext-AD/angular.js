@@ -174,7 +174,8 @@ var MAX_MXSS_ATTEMPTS = 5;
  * @param {string} html The html to sanitize.
  * @param {function(string): string} sanitize Sanitizes html, without the mXSS protection.
  * @returns {string} The sanitized html that is still safe after the browser parses it.
- * @throws {$sanitize:uinput} When the browser changes the html on `MAX_MXSS_ATTEMPTS` checks.
+ * @throws {Error} `$sanitize:uinput` when the browser changes the html on `MAX_MXSS_ATTEMPTS`
+ *   checks in a row.
  */
 function sanitizeProtectingFromMXSS(html, sanitize) {
   var candidate = sanitize(html);
@@ -463,7 +464,7 @@ var inertBodyElement = document.implementation.createHTMLDocument('inert').body;
  *
  * The html is parsed in an inert document, so it loads no resources and runs no scripts.
  *
- * @param {string} html
+ * @param {string} html The html to parse.
  * @returns {string} The browser's serialization of the result, which parses back into the same DOM.
  */
 function htmlParseAndSerialize(html) {
