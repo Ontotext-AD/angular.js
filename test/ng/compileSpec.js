@@ -6258,7 +6258,15 @@ describe('$compile', function() {
         'http://example.com/image1.png 1x,javascript:doEvilStuff() 2x':'http://example.com/image1.png 1x,unsafe:javascript:doEvilStuff() 2x',
         'http://example.com/image1.jpg?x=a,b 1x,http://example.com/ima,ge2.jpg 2x':'http://example.com/image1.jpg?x=a,b 1x,http://example.com/ima,ge2.jpg 2x',
         //Test regex to make sure doesn't mistake parts of url for pixel density descriptors
-        'http://example.com/image1.jpg?x=a2x,b 1x,http://example.com/ima,ge2.jpg 2x':'http://example.com/image1.jpg?x=a2x,b 1x,http://example.com/ima,ge2.jpg 2x'
+        'http://example.com/image1.jpg?x=a2x,b 1x,http://example.com/ima,ge2.jpg 2x':'http://example.com/image1.jpg?x=a2x,b 1x,http://example.com/ima,ge2.jpg 2x',
+        //Test separators with longer and other whitespace, and descriptors that are not split on
+        'http://example.com/image1.png   1x  ,   http://example.com/image2.png 2x':'http://example.com/image1.png 1x  ,http://example.com/image2.png 2x',
+        'http://example.com/image1.png\t1x,\nhttp://example.com/image2.png\t2x':'http://example.com/image1.png 1x,http://example.com/image2.png 2x',
+        'http://example.com/image1.png\u00a01x,\u00a0http://example.com/image2.png 2x':'http://example.com/image1.png 1x,http://example.com/image2.png 2x',
+        'http://example.com/image1.png 1.5x, http://example.com/image2.png 2x':'http://example.com/image1.png 1.5x ,http://example.com/image2.png 2x',
+        'http://example.com/image1.png 64, http://example.com/image2.png 2x':'http://example.com/image1.png 64 ,http://example.com/image2.png 2x',
+        'http://example.com/image1.png 1x,, http://example.com/image2.png 2x':'http://example.com/image1.png 1x, ,http://example.com/image2.png 2x',
+        'http://example.com/image1.png 1x , , http://example.com/image2.png 2x':'http://example.com/image1.png 1x , ,http://example.com/image2.png 2x'
       };
 
       forEach(testSet, function(ref, url) {
@@ -6267,6 +6275,38 @@ describe('$compile', function() {
         expect(element.attr('srcset')).toEqual(ref);
       });
 
+    }));
+
+    it('should sanitize a srcset with a long whitespace run as fast as one with short runs',
+        inject(function($rootScope, $compile) {
+      // CVE-2024-21490: the split RegExp took quadratic time on long whitespace runs. Both values
+      // have the same length, and the one with short runs is linear with any split, so it measures
+      // the speed of this machine.
+      var url1 = 'http://example.com/image1.png';
+      var url2 = 'http://example.com/image2.png';
+      var longRun = url1 + new Array(50001).join(' ') + url2;
+      var shortRuns = url1 + new Array(25001).join(' a') + url2;
+      element = $compile('<img srcset="{{testUrl}}"></img>')($rootScope);
+
+      function sanitizeTime(srcset) {
+        $rootScope.testUrl = '';
+        $rootScope.$digest();
+        $rootScope.testUrl = srcset;
+        var start = Date.now();
+        $rootScope.$digest();
+        var time = Date.now() - start;
+        expect(element.attr('srcset')).toEqual(url1);
+        return time;
+      }
+
+      // the fastest of a few runs, so that a pause during one run does not raise the limit
+      var shortRunsTime = Math.min(
+          sanitizeTime(shortRuns), sanitizeTime(shortRuns), sanitizeTime(shortRuns));
+      var longRunTime = sanitizeTime(longRun);
+
+      // The quadratic split took hundreds of times longer; 10 times leaves room for noise. The
+      // 5 ms floor covers the timer resolution when both are too fast to measure.
+      expect(longRunTime).toBeLessThan(Math.max(shortRunsTime, 5) * 10);
     }));
   });
 
