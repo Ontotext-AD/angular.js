@@ -56,6 +56,9 @@ var $sanitizeMinErr = angular.$$minErr('$sanitize');
  *   it into the returned string, however, since our parser is more strict than a typical browser
  *   parser, it's possible that some obscure input, which would be recognized as valid HTML by a
  *   browser, won't make it through the sanitizer. The input may also contain SVG markup.
+ *   To protect from mXSS, the sanitizer lets the browser parse the sanitized html and checks that
+ *   the result is still safe. It throws {@link error/$sanitize/uinput `$sanitize:uinput`} when the
+ *   browser keeps changing the html.
  *   The whitelist is configured using the functions `aHrefSanitizationWhitelist` and
  *   `imgSrcSanitizationWhitelist` of {@link ng.$compileProvider `$compileProvider`}.
  *
@@ -145,14 +148,48 @@ var $sanitizeMinErr = angular.$$minErr('$sanitize');
  */
 function $SanitizeProvider() {
   this.$get = ['$$sanitizeUri', function($$sanitizeUri) {
-    return function(html) {
+    function sanitize(html) {
       var buf = [];
       htmlParser(html, htmlSanitizeWriter(buf, function(uri, isImage) {
         return !/^unsafe/.test($$sanitizeUri(uri, isImage));
       }));
       return buf.join('');
+    }
+
+    return function(html) {
+      return sanitizeProtectingFromMXSS(html, sanitize);
     };
   }];
+}
+
+var MAX_MXSS_ATTEMPTS = 5;
+
+/**
+ * Sanitizes the html so that it stays safe after the browser parses it again (mutation XSS).
+ *
+ * A browser bug can turn the sanitized html into markup the sanitizer would have removed. The
+ * html is safe when sanitizing what the browser builds from it removes nothing; otherwise what
+ * the browser builds is sanitized and checked the same way.
+ *
+ * @param {string} html The html to sanitize.
+ * @param {function(string): string} sanitize Sanitizes html, without the mXSS protection.
+ * @returns {string} The sanitized html that is still safe after the browser parses it.
+ * @throws {Error} `$sanitize:uinput` when the browser changes the html on `MAX_MXSS_ATTEMPTS`
+ *   checks in a row.
+ */
+function sanitizeProtectingFromMXSS(html, sanitize) {
+  var candidate = sanitize(html);
+  var parsed = htmlParseAndSerialize(candidate);
+  for (var attempt = 0; attempt < MAX_MXSS_ATTEMPTS; attempt++) {
+    var resanitized = sanitize(parsed);
+    var reparsed = htmlParseAndSerialize(resanitized);
+    if (reparsed === parsed) {
+      return candidate;
+    }
+    candidate = resanitized;
+    parsed = reparsed;
+  }
+  throw $sanitizeMinErr('uinput', "Failed to sanitize html because the input is unstable");
 }
 
 function sanitizeText(chars) {
@@ -419,6 +456,32 @@ function htmlParser(html, handler) {
       stack.length = pos;
     }
   }
+}
+
+var inertBodyElement = document.implementation.createHTMLDocument('inert').body;
+/**
+ * Lets the browser parse the html, as it would when the html is inserted into the page.
+ *
+ * The html is parsed in an inert document, so it loads no resources and runs no scripts.
+ *
+ * @param {string} html The html to parse.
+ * @returns {string} The browser's serialization of the result, which parses back into the same DOM.
+ */
+function htmlParseAndSerialize(html) {
+  inertBodyElement.innerHTML = html;
+  var pres = inertBodyElement.getElementsByTagName('pre');
+  for (var i = 0; i < pres.length; i++) {
+    var firstChild = pres[i].firstChild;
+    // The parser drops the first newline of a pre and the serializer does not add it back.
+    if (firstChild && firstChild.nodeType === 3 /* text node */ &&
+        firstChild.nodeValue.charAt(0) === '\n') {
+      firstChild.nodeValue = '\n' + firstChild.nodeValue;
+    }
+  }
+  // The serializer writes carriage returns raw, and the parser turns raw ones into newlines.
+  var serialized = inertBodyElement.innerHTML.replace(/\r/g, '&#13;');
+  inertBodyElement.innerHTML = '';
+  return serialized;
 }
 
 var hiddenPre=document.createElement("pre");

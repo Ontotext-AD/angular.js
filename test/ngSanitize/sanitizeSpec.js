@@ -267,6 +267,56 @@ describe('HTML', function() {
       .toEqual('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a></a></svg>');
   });
 
+  describe('mXSS protection', function() {
+
+    it('should keep the leading newlines of pre', function() {
+      // The browser drops the first newline of a pre when it parses the html.
+      expectHTML('<pre>\n\nfoo</pre>').toEqual('<pre>&#10;&#10;foo</pre>');
+      expectHTML('<pre>\n\n\n\n\n\nfoo</pre>').toEqual('<pre>&#10;&#10;&#10;&#10;&#10;&#10;foo</pre>');
+    });
+
+    it('should keep carriage returns written as character references', function() {
+      // The browser serializes them as raw carriage returns, which a parser turns into newlines.
+      expectHTML('a&#13;b').toEqual('a&#13;b');
+      expectHTML('<b title="a&#13;b">x</b>').toEqual('<b title="a&#13;b">x</b>');
+      expectHTML('<pre>&#13;&#10;x</pre>').toEqual('<pre>&#13;&#10;x</pre>');
+    });
+  });
+
+  describe('mXSS protection with a faked browser', function() {
+    /* global htmlParseAndSerialize: false */
+    if (angular.isUndefined(window.htmlParseAndSerialize)) return;
+
+    // Stands in for a browser bug: parsing the given markup and serializing it again yields
+    // different, possibly dangerous, markup.
+    function fakeBrowserMutation(mutate) {
+      var parseAndSerialize = window.htmlParseAndSerialize;
+      spyOn(window, 'htmlParseAndSerialize').andCallFake(function(html) {
+        return mutate(parseAndSerialize(html));
+      });
+    }
+
+    it('should sanitize the markup that the browser mutates the sanitized html into', function() {
+      fakeBrowserMutation(function(html) {
+        return html.replace('<i>mutate</i>', '<img src="x" onerror="alert(1)">');
+      });
+
+      expectHTML('<b>a</b><i>mutate</i>').toEqual('<b>a</b><img src="x"/>');
+    });
+
+    it('should throw uinput if the browser keeps mutating the sanitized html', function() {
+      var mutations = 0;
+      fakeBrowserMutation(function(html) {
+        // Stop at some point, so that the test ends even if the sanitizer never gives up.
+        return ++mutations > 100 ? html : html + '<i>' + mutations + '</i>';
+      });
+
+      expect(function() {
+        expectHTML('<b>a</b>');
+      }).toThrowMinErr('$sanitize', 'uinput', 'Failed to sanitize html because the input is unstable');
+    });
+  });
+
   describe('htmlSanitizerWriter', function() {
     /* global htmlSanitizeWriter: false */
     if (angular.isUndefined(window.htmlSanitizeWriter)) return;
