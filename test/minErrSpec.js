@@ -91,6 +91,13 @@ describe('minErr', function() {
   });
 
 
+  it('should name the built version in the error link', function() {
+    // Scanners such as retire.js read the AngularJS version of a minified file from this link.
+    expect(testError('acode', 'aproblem').message)
+      .toContain('\nhttp://errors.angularjs.org/"NG_VERSION_FULL"/test/acode');
+  });
+
+
   it('should accept an optional 2nd argument to construct custom errors', function() {
     var normalMinErr = minErr('normal');
     expect(normalMinErr('acode', 'aproblem') instanceof TypeError).toBe(false);
