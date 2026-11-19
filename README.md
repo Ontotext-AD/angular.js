@@ -26,9 +26,10 @@ Versions have the form `1.3.N-onto`. The first fork release is `1.3.21-onto`, on
 
 The `version` field of `package.json` holds the last release, 1.3.20 before the first fork
 release. The release job sets it to the new version, and the build takes the version from it.
-Error messages link to
-`errors.angularjs.org` with the `upstreamVersion` field (1.3.20), because the error pages exist
-only for upstream releases.
+Error messages link to `errors.angularjs.org` with this version, e.g.
+`http://errors.angularjs.org/1.3.22-onto/...`. The link has no error page behind it, but scanners
+such as retire.js read the AngularJS version of a minified file from it, so it must name the
+fork's version.
 
 ### Build prerequisites
 
