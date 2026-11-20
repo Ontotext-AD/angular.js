@@ -19,6 +19,11 @@ after the last upstream 1.3 release, 1.3.20.
 Each package holds the `.js`, `.min.js` and `.min.js.map` files of its module, and an `index.js`
 that works with `require()` the same way as in the upstream `angular*` packages.
 
+`@ontotext/angular` also holds the fork's VEX document, `vex/ontotext-angular-1.3.x.openvex.json`
+(see [SECURITY.md](SECURITY.md)). The build adds the package version to the products of every
+statement, so the document always names the version it ships with. A new finding that the fork
+fixes gets its statement in [`vex/`](vex/) in the same change as the fix.
+
 ### Versioning
 
 Versions have the form `1.3.N-onto`. The first fork release is `1.3.21-onto`, one step after
