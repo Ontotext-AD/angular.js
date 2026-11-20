@@ -1,0 +1,181 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/Ontotext-AD/angular.js/blob/v1.3.x/vex/ontotext-angular-1.3.x.openvex.json",
+  "author": "Ontotext",
+  "role": "Fork maintainer",
+  "timestamp": "2026-11-19T00:00:00Z",
+  "version": 1,
+  "tooling": "Written by hand",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-21490",
+        "aliases": [
+          "GHSA-4w4v-5hc9-xrr2"
+        ],
+        "description": "ReDoS in the srcset attribute handling of $compile"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "srcset values are split in linear time. Fixed in 1.3.21-onto, commit e010d8822."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-11998",
+        "aliases": [
+          "GHSA-7x27-g8rg-x87w"
+        ],
+        "description": "$sce resource URL whitelist bypass through partially anchored RegExp matchers"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "Every branch of a RegExp matcher is anchored at both ends. Fixed in 1.3.21-onto, commit b9f02d417."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-10768",
+        "aliases": [
+          "GHSA-89mq-4x47-5v83"
+        ],
+        "description": "Prototype pollution in angular.merge"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.22-onto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "angular.merge was added in AngularJS 1.4.0. The 1.3.x fork does not contain it."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-14863",
+        "aliases": [
+          "GHSA-r5fx-8r73-v86c"
+        ],
+        "description": "XSS through xlink:href on SVG anchors"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "xlink:href on SVG anchors is sanitized like href. Fixed in 1.3.21-onto, commit 52dd988a1."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2020-7676",
+        "aliases": [
+          "GHSA-mhp6-pxh8-r675"
+        ],
+        "description": "XSS in jqLite through <option> elements wrapped in <select>"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "jqLite wraps <option> in <select> before parsing HTML. Fixed in 1.3.21-onto, commit 992eec033."
+    },
+    {
+      "vulnerability": {
+        "name": "npm:angular:20150310",
+        "description": "XSS in $sanitize through SVG animation elements (Snyk, no CVE)"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular-sanitize@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular-sanitize@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular-sanitize@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular-sanitize@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "$sanitize drops SVG animation elements. Fixed in 1.3.21-onto, commit 1ff0f86ca."
+    },
+    {
+      "vulnerability": {
+        "name": "npm:angular:20150909",
+        "description": "Mutation XSS in $sanitize (Snyk, no CVE)"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/%40ontotext/angular-sanitize@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/angular-sanitize@1.3.21-onto"
+        },
+        {
+          "@id": "pkg:npm/%40ontotext/angular-sanitize@1.3.22-onto"
+        },
+        {
+          "@id": "pkg:npm/angular-sanitize@1.3.22-onto"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "$sanitize parses its output again and rejects input that changes between passes. Fixed in 1.3.21-onto, commit 871436537."
+    }
+  ]
+}
